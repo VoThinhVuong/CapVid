@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Upload, Video, Send, Bot, User, Sparkles, Download, Copy } from "lucide-react"
+import { Upload, Video, Send, Bot, User, Sparkles, Download, Copy, ImageIcon } from "lucide-react"
 
 interface Message {
   id: string
@@ -39,14 +39,20 @@ interface CaptionData {
   language: string
 }
 
+type Mode = "video" | "image"
+
 export default function VideoCaptioningApp() {
+  const [mode, setMode] = useState<Mode>("video")
   const [selectedVideo, setSelectedVideo] = useState<File | null>(null)
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [videoUrl, setVideoUrl] = useState<string>("")
+  const [imageUrl, setImageUrl] = useState<string>("")
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
       role: "assistant",
-      content: "Hello! Upload a video file and I'll help you generate accurate captions using advanced AI technology.",
+      content:
+        "Hello! Upload a video file and I'll help you generate accurate captions, or switch to Image VQA mode to ask questions about images using advanced AI technology.",
       timestamp: new Date(),
     },
   ])
@@ -54,6 +60,30 @@ export default function VideoCaptioningApp() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [captionData, setCaptionData] = useState<CaptionData | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+
+  const handleModeSwitch = (newMode: Mode) => {
+    setMode(newMode)
+    // Reset state when switching modes
+    setSelectedVideo(null)
+    setSelectedImage(null)
+    setVideoUrl("")
+    setImageUrl("")
+    setCaptionData(null)
+    setIsProcessing(false)
+
+    // Update welcome message based on mode
+    const welcomeMessage: Message = {
+      id: Date.now().toString(),
+      role: "assistant",
+      content:
+        newMode === "video"
+          ? "Switched to Video Captioning mode! Upload a video file and I'll help you generate accurate captions using advanced AI technology."
+          : "Switched to Image VQA mode! Upload an image and ask me questions about it. I can describe what I see, answer specific questions, and provide detailed analysis.",
+      timestamp: new Date(),
+    }
+    setMessages([welcomeMessage])
+  }
 
   const handleVideoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -74,6 +104,24 @@ export default function VideoCaptioningApp() {
     }
   }
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file && file.type.startsWith("image/")) {
+      setSelectedImage(file)
+      const url = URL.createObjectURL(file)
+      setImageUrl(url)
+
+      // Add message about image upload
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        role: "assistant",
+        content: `Perfect! I've received your image "${file.name}" (${(file.size / 1024 / 1024).toFixed(1)} MB). I can see the image now. Feel free to ask me questions about what I see, or I can provide a general description of the image.`,
+        timestamp: new Date(),
+      }
+      setMessages((prev) => [...prev, newMessage])
+    }
+  }
+
   const handleDragOver = (event: React.DragEvent) => {
     event.preventDefault()
   }
@@ -81,7 +129,8 @@ export default function VideoCaptioningApp() {
   const handleDrop = (event: React.DragEvent) => {
     event.preventDefault()
     const file = event.dataTransfer.files[0]
-    if (file && file.type.startsWith("video/")) {
+
+    if (mode === "video" && file && file.type.startsWith("video/")) {
       setSelectedVideo(file)
       const url = URL.createObjectURL(file)
       setVideoUrl(url)
@@ -91,6 +140,18 @@ export default function VideoCaptioningApp() {
         id: Date.now().toString(),
         role: "assistant",
         content: `Perfect! I've received your video "${file.name}" (${(file.size / 1024 / 1024).toFixed(1)} MB). Ready to generate captions when you are!`,
+        timestamp: new Date(),
+      }
+      setMessages((prev) => [...prev, newMessage])
+    } else if (mode === "image" && file && file.type.startsWith("image/")) {
+      setSelectedImage(file)
+      const url = URL.createObjectURL(file)
+      setImageUrl(url)
+
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        role: "assistant",
+        content: `Excellent! I've received your image "${file.name}" (${(file.size / 1024 / 1024).toFixed(1)} MB). I can analyze the image now. What would you like to know about it?`,
         timestamp: new Date(),
       }
       setMessages((prev) => [...prev, newMessage])
@@ -251,15 +312,33 @@ export default function VideoCaptioningApp() {
     setMessages((prev) => [...prev, userMessage])
     setInputMessage("")
 
-    // Simulate AI response
+    // Simulate AI response based on mode
     setTimeout(() => {
-      const responses = [
-        "I can help you with that! What specific aspect of video captioning would you like to know more about?",
-        "Great question! The AI uses advanced speech recognition and natural language processing to generate accurate captions.",
-        "I support various video formats including MP4, AVI, MOV, and WebM. The captions can be exported in SRT, VTT, or JSON format.",
-        "The processing time depends on video length, but typically takes 1-3 minutes for a 10-minute video.",
-        "You can download the captions in multiple formats or copy them directly to your clipboard for easy use.",
-      ]
+      let responses: string[]
+
+      if (mode === "video") {
+        responses = [
+          "I can help you with that! What specific aspect of video captioning would you like to know more about?",
+          "Great question! The AI uses advanced speech recognition and natural language processing to generate accurate captions.",
+          "I support various video formats including MP4, AVI, MOV, and WebM. The captions can be exported in SRT, VTT, or JSON format.",
+          "The processing time depends on video length, but typically takes 1-3 minutes for a 10-minute video.",
+          "You can download the captions in multiple formats or copy them directly to your clipboard for easy use.",
+        ]
+      } else {
+        responses = selectedImage
+          ? [
+              "I can see your image! What specific details would you like me to analyze or describe?",
+              "Based on the image you've uploaded, I can provide detailed descriptions, identify objects, read text, or answer specific questions about what I see.",
+              "Feel free to ask me about colors, objects, people, text, or any other aspects of the image you're curious about.",
+              "I can help with image analysis, object detection, scene description, and visual question answering.",
+              "What would you like to know about this image? I can describe the overall scene or focus on specific elements.",
+            ]
+          : [
+              "Please upload an image first, and then I can answer questions about what I see in it!",
+              "To use Image VQA mode, you'll need to upload an image file first. Then I can analyze it and answer your questions.",
+              "I'm ready to help with image analysis! Just upload an image and ask me anything about it.",
+            ]
+      }
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -276,15 +355,47 @@ export default function VideoCaptioningApp() {
       {/* Header */}
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg">
-              <Sparkles className="h-6 w-6 text-white" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg">
+                <Sparkles className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  CaptionAI Pro
+                </h1>
+                <p className="text-sm text-gray-600">Professional AI-Powered Media Analysis</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                CaptionAI Pro
-              </h1>
-              <p className="text-sm text-gray-600">Professional Video Captioning with AI</p>
+
+            {/* Mode Switch Buttons */}
+            <div className="flex items-center gap-2 bg-white/90 rounded-lg p-1 shadow-sm">
+              <Button
+                onClick={() => handleModeSwitch("video")}
+                variant={mode === "video" ? "default" : "ghost"}
+                size="sm"
+                className={`flex items-center gap-2 ${
+                  mode === "video"
+                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                <Video className="h-4 w-4" />
+                Video Captions
+              </Button>
+              <Button
+                onClick={() => handleModeSwitch("image")}
+                variant={mode === "image" ? "default" : "ghost"}
+                size="sm"
+                className={`flex items-center gap-2 ${
+                  mode === "image"
+                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                <ImageIcon className="h-4 w-4" />
+                Image VQA
+              </Button>
             </div>
           </div>
         </div>
@@ -292,12 +403,21 @@ export default function VideoCaptioningApp() {
 
       <div className="container mx-auto px-4 py-8">
         <div className="grid lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
-          {/* Video Upload Section */}
+          {/* Upload Section */}
           <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-xl">
-                <Video className="h-5 w-5 text-blue-600" />
-                Video Upload
+                {mode === "video" ? (
+                  <>
+                    <Video className="h-5 w-5 text-blue-600" />
+                    Video Upload
+                  </>
+                ) : (
+                  <>
+                    <ImageIcon className="h-5 w-5 text-blue-600" />
+                    Image Upload
+                  </>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -306,22 +426,39 @@ export default function VideoCaptioningApp() {
                 className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors cursor-pointer"
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => (mode === "video" ? fileInputRef.current?.click() : imageInputRef.current?.click())}
               >
-                <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-lg font-medium text-gray-700 mb-2">Drop your video here or click to browse</p>
-                <p className="text-sm text-gray-500">Supports MP4, AVI, MOV, WebM (Max 500MB)</p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="video/*"
-                  onChange={handleVideoUpload}
-                  className="hidden"
-                />
+                {mode === "video" ? (
+                  <>
+                    <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-lg font-medium text-gray-700 mb-2">Drop your video here or click to browse</p>
+                    <p className="text-sm text-gray-500">Supports MP4, AVI, MOV, WebM (Max 500MB)</p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="video/*"
+                      onChange={handleVideoUpload}
+                      className="hidden"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-lg font-medium text-gray-700 mb-2">Drop your image here or click to browse</p>
+                    <p className="text-sm text-gray-500">Supports JPG, PNG, GIF, WebP (Max 10MB)</p>
+                    <input
+                      ref={imageInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                  </>
+                )}
               </div>
 
-              {/* Video Preview */}
-              {videoUrl && (
+              {/* Media Preview */}
+              {mode === "video" && videoUrl && (
                 <div className="space-y-4">
                   <video
                     src={videoUrl}
@@ -349,8 +486,29 @@ export default function VideoCaptioningApp() {
                 </div>
               )}
 
-              {/* Caption Download Section */}
-              {captionData && (
+              {mode === "image" && imageUrl && (
+                <div className="space-y-4">
+                  <img
+                    src={imageUrl || "/placeholder.svg"}
+                    alt="Uploaded image"
+                    className="w-full rounded-lg shadow-md max-h-80 object-contain bg-gray-50"
+                  />
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-gray-900">{selectedImage?.name}</p>
+                      <p className="text-sm text-gray-500">
+                        {selectedImage && `${(selectedImage.size / 1024 / 1024).toFixed(1)} MB`}
+                      </p>
+                    </div>
+                    <p className="text-sm text-blue-600 mt-2">
+                      ✅ Image loaded! Ask me questions about what you see in the chat.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Caption Download Section - Only for video mode */}
+              {mode === "video" && captionData && (
                 <Card className="bg-green-50 border-green-200">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg text-green-800">Captions Ready!</CardTitle>
@@ -426,6 +584,9 @@ export default function VideoCaptioningApp() {
               <CardTitle className="flex items-center gap-2 text-xl">
                 <Bot className="h-5 w-5 text-indigo-600" />
                 AI Assistant
+                <span className="text-sm font-normal text-gray-500 ml-2">
+                  ({mode === "video" ? "Video Captioning" : "Image VQA"})
+                </span>
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -467,14 +628,22 @@ export default function VideoCaptioningApp() {
                     <Input
                       value={inputMessage}
                       onChange={(e) => setInputMessage(e.target.value)}
-                      placeholder="Ask about captioning, formats, or processing..."
+                      placeholder={
+                        mode === "video"
+                          ? "Ask about captioning, formats, or processing..."
+                          : selectedImage
+                            ? "Ask me about the image..."
+                            : "Upload an image first to start asking questions..."
+                      }
                       onKeyPress={(e) => e.key === "Enter" && sendMessage()}
                       className="flex-1"
+                      disabled={mode === "image" && !selectedImage}
                     />
                     <Button
                       onClick={sendMessage}
                       size="icon"
                       className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                      disabled={mode === "image" && !selectedImage}
                     >
                       <Send className="h-4 w-4" />
                     </Button>
@@ -491,9 +660,9 @@ export default function VideoCaptioningApp() {
             <div className="p-3 bg-blue-100 rounded-full w-fit mx-auto mb-4">
               <Sparkles className="h-6 w-6 text-blue-600" />
             </div>
-            <h3 className="font-semibold text-lg mb-2">AI-Powered Accuracy</h3>
+            <h3 className="font-semibold text-lg mb-2">AI-Powered Analysis</h3>
             <p className="text-gray-600 text-sm">
-              Advanced speech recognition with 95%+ accuracy across multiple languages
+              Advanced AI for video captioning and image understanding with 95%+ accuracy
             </p>
           </Card>
 
@@ -501,16 +670,16 @@ export default function VideoCaptioningApp() {
             <div className="p-3 bg-indigo-100 rounded-full w-fit mx-auto mb-4">
               <Video className="h-6 w-6 text-indigo-600" />
             </div>
-            <h3 className="font-semibold text-lg mb-2">Multiple Formats</h3>
-            <p className="text-gray-600 text-sm">Export captions in SRT, VTT, WebVTT, and JSON formats</p>
+            <h3 className="font-semibold text-lg mb-2">Dual Mode Support</h3>
+            <p className="text-gray-600 text-sm">Switch between video captioning and image VQA modes seamlessly</p>
           </Card>
 
           <Card className="text-center p-6 bg-white/80 backdrop-blur-sm border-0 shadow-lg">
             <div className="p-3 bg-purple-100 rounded-full w-fit mx-auto mb-4">
               <Bot className="h-6 w-6 text-purple-600" />
             </div>
-            <h3 className="font-semibold text-lg mb-2">Real-time Processing</h3>
-            <p className="text-gray-600 text-sm">Fast processing with real-time progress updates and instant results</p>
+            <h3 className="font-semibold text-lg mb-2">Interactive Chat</h3>
+            <p className="text-gray-600 text-sm">Ask questions and get instant AI-powered responses about your media</p>
           </Card>
         </div>
       </div>
