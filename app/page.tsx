@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useRef } from "react"
+import { askGemini } from "@/lib/geminiService"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -41,13 +42,14 @@ interface CaptionData {
 
 type Mode = "video" | "image"
 
-export default function VideoCaptioningApp() {
+export default function Home() {
   const [mode, setMode] = useState<Mode>("video")
   const [selectedVideo, setSelectedVideo] = useState<File | null>(null)
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [videoUrl, setVideoUrl] = useState<string>("")
   const [imageUrl, setImageUrl] = useState<string>("")
-  const [messages, setMessages] = useState<Message[]>([
+  // Separate chat histories for each mode
+  const [videoMessages, setVideoMessages] = useState<Message[]>([
     {
       id: "1",
       role: "assistant",
@@ -56,11 +58,24 @@ export default function VideoCaptioningApp() {
       timestamp: new Date(),
     },
   ])
+  const [imageMessages, setImageMessages] = useState<Message[]>([
+    {
+      id: "1",
+      role: "assistant",
+      content:
+        "Hello! Upload an image and ask me questions about it. I can describe what I see, answer specific questions, and provide detailed analysis.",
+      timestamp: new Date(),
+    },
+  ])
   const [inputMessage, setInputMessage] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
   const [captionData, setCaptionData] = useState<CaptionData | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
+
+  // Helper to get/set messages based on mode
+  const messages = mode === "video" ? videoMessages : imageMessages;
+  const setMessages = mode === "video" ? setVideoMessages : setImageMessages;
 
   const handleModeSwitch = (newMode: Mode) => {
     setMode(newMode)
@@ -72,7 +87,7 @@ export default function VideoCaptioningApp() {
     setCaptionData(null)
     setIsProcessing(false)
 
-    // Update welcome message based on mode
+    // Add a welcome message to the new mode's chat history
     const welcomeMessage: Message = {
       id: Date.now().toString(),
       role: "assistant",
@@ -82,7 +97,11 @@ export default function VideoCaptioningApp() {
           : "Switched to Image VQA mode! Upload an image and ask me questions about it. I can describe what I see, answer specific questions, and provide detailed analysis.",
       timestamp: new Date(),
     }
-    setMessages([welcomeMessage])
+    if (newMode === "video") {
+      setVideoMessages((prev) => [...prev])
+    } else {
+      setImageMessages((prev) => [...prev ])
+    }
   }
 
   const handleVideoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -299,7 +318,7 @@ export default function VideoCaptioningApp() {
     }
   }
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (!inputMessage.trim()) return
 
     const userMessage: Message = {
@@ -312,42 +331,41 @@ export default function VideoCaptioningApp() {
     setMessages((prev) => [...prev, userMessage])
     setInputMessage("")
 
-    // Simulate AI response based on mode
-    setTimeout(() => {
-      let responses: string[]
-
-      if (mode === "video") {
-        responses = [
-          "I can help you with that! What specific aspect of video captioning would you like to know more about?",
-          "Great question! The AI uses advanced speech recognition and natural language processing to generate accurate captions.",
-          "I support various video formats including MP4, AVI, MOV, and WebM. The captions can be exported in SRT, VTT, or JSON format.",
-          "The processing time depends on video length, but typically takes 1-3 minutes for a 10-minute video.",
-          "You can download the captions in multiple formats or copy them directly to your clipboard for easy use.",
-        ]
-      } else {
-        responses = selectedImage
-          ? [
-              "I can see your image! What specific details would you like me to analyze or describe?",
-              "Based on the image you've uploaded, I can provide detailed descriptions, identify objects, read text, or answer specific questions about what I see.",
-              "Feel free to ask me about colors, objects, people, text, or any other aspects of the image you're curious about.",
-              "I can help with image analysis, object detection, scene description, and visual question answering.",
-              "What would you like to know about this image? I can describe the overall scene or focus on specific elements.",
-            ]
-          : [
-              "Please upload an image first, and then I can answer questions about what I see in it!",
-              "To use Image VQA mode, you'll need to upload an image file first. Then I can analyze it and answer your questions.",
-              "I'm ready to help with image analysis! Just upload an image and ask me anything about it.",
-            ]
-      }
-
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
+    // Show a temporary assistant message while waiting for Gemini
+    const tempId = (Date.now() + 1).toString();
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: tempId,
         role: "assistant",
-        content: responses[Math.floor(Math.random() * responses.length)],
+        content: "Thinking...",
         timestamp: new Date(),
+      },
+    ])
+
+    try {
+      let prompt = inputMessage;
+      if (mode === "image" && !selectedImage) {
+        prompt = "[No image uploaded] " + inputMessage;
       }
-      setMessages((prev) => [...prev, aiMessage])
-    }, 1000)
+      // Optionally, you can add more context to the prompt here
+      const geminiResponse = await askGemini(prompt);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === tempId
+            ? { ...msg, content: geminiResponse, timestamp: new Date() }
+            : msg
+        )
+      );
+    } catch (error) {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === tempId
+            ? { ...msg, content: "❌ Error: Failed to get response from Gemini API.", timestamp: new Date() }
+            : msg
+        )
+      );
+    }
   }
 
   return (
