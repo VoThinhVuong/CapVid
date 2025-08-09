@@ -9,35 +9,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Upload, Video, Send, Bot, User, Sparkles, Download, Copy, ImageIcon } from "lucide-react"
+import { getVideoCaption, getVideoContext, getImageCaption} from "@/lib/vidcapService"
 
 interface Message {
   id: string
   role: "user" | "assistant"
   content: string
   timestamp: Date
-}
-
-interface CaptionData {
-  filename: string
-  fileSize: number
-  duration: string
-  captionCount: number
-  captions: Array<{
-    start: string
-    end: string
-    text: string
-  }>
-  formats: {
-    srt: string
-    vtt: string
-    json: Array<{
-      start: string
-      end: string
-      text: string
-    }>
-  }
-  confidence: number
-  language: string
 }
 
 type Mode = "video" | "image"
@@ -48,6 +26,7 @@ export default function Home() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [videoUrl, setVideoUrl] = useState<string>("")
   const [imageUrl, setImageUrl] = useState<string>("")
+  const [context, setContext] = useState<string>("")
   // Separate chat histories for each mode
   const [videoMessages, setVideoMessages] = useState<Message[]>([
     {
@@ -69,7 +48,8 @@ export default function Home() {
   ])
   const [inputMessage, setInputMessage] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
-  const [captionData, setCaptionData] = useState<CaptionData | null>(null)
+  const [imgCaptionData, setImgCaptionData] = useState< string >("")
+  const [vidCaptionData, setVidCaptionData] = useState< string >("")
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
 
@@ -80,11 +60,6 @@ export default function Home() {
   const handleModeSwitch = (newMode: Mode) => {
     setMode(newMode)
     // Reset state when switching modes
-    setSelectedVideo(null)
-    setSelectedImage(null)
-    setVideoUrl("")
-    setImageUrl("")
-    setCaptionData(null)
     setIsProcessing(false)
 
     // Add a welcome message to the new mode's chat history
@@ -110,7 +85,6 @@ export default function Home() {
       setSelectedVideo(file)
       const url = URL.createObjectURL(file)
       setVideoUrl(url)
-      setCaptionData(null) // Reset previous captions
 
       // Add message about video upload
       const newMessage: Message = {
@@ -153,7 +127,7 @@ export default function Home() {
       setSelectedVideo(file)
       const url = URL.createObjectURL(file)
       setVideoUrl(url)
-      setCaptionData(null) // Reset previous captions
+      // Reset previous captions
 
       const newMessage: Message = {
         id: Date.now().toString(),
@@ -197,37 +171,38 @@ export default function Home() {
       formData.append("video", selectedVideo)
 
       // Call the API
-      const response = await fetch("/api/caption", {
-        method: "POST",
-        body: formData,
-      })
+      if(mode === "video") {
+        const caption = await getVideoCaption(selectedVideo)
+        const context = await getVideoContext(selectedVideo)
 
-      const result = await response.json()
+        setVidCaptionData(caption)
+        setContext(context)
 
-      if (result.success) {
-        setCaptionData(result.data)
-
-        // Add success message with caption preview
         const successMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: `✅ Captions generated successfully!\n\n📊 **Results:**\n• File: ${result.data.filename}\n• Duration: ${result.data.duration}\n• Captions: ${result.data.captionCount} segments\n• Confidence: ${(result.data.confidence * 100).toFixed(1)}%\n• Language: ${result.data.language}\n\n📝 **Preview:**\n${result.data.captions
-            .slice(0, 2)
-            .map((cap) => `${cap.start} --> ${cap.end}\n${cap.text}`)
-            .join("\n\n")}\n\nYou can now download the captions in SRT, VTT, or JSON format using the buttons below!`,
+          content: vidCaptionData,
           timestamp: new Date(),
         }
         setMessages((prev) => [...prev, successMessage])
-      } else {
-        // Add error message
-        const errorMessage: Message = {
+
+      }
+      else {
+        const caption = await getImageCaption(selectedVideo)
+
+        setImgCaptionData(caption)
+
+        const successMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: `❌ Error: ${result.error}\n\nPlease try again or contact support if the issue persists.`,
+          content: imgCaptionData,
           timestamp: new Date(),
         }
-        setMessages((prev) => [...prev, errorMessage])
+        setMessages((prev) => [...prev, successMessage])
       }
+
+        // Add success message with caption preview
+
     } catch (error) {
       console.error("Error generating captions:", error)
       const errorMessage: Message = {
@@ -243,80 +218,80 @@ export default function Home() {
     }
   }
 
-  const downloadCaptions = (format: "srt" | "vtt" | "json") => {
-    if (!captionData) return
+  // const downloadCaptions = (format: "srt" | "vtt" | "json") => {
+  //   if (!captionData) return
 
-    let content: string
-    let filename: string
-    let mimeType: string
+  //   let content: string
+  //   let filename: string
+  //   let mimeType: string
 
-    switch (format) {
-      case "srt":
-        content = captionData.formats.srt
-        filename = `${captionData.filename.replace(/\.[^/.]+$/, "")}.srt`
-        mimeType = "text/plain"
-        break
-      case "vtt":
-        content = captionData.formats.vtt
-        filename = `${captionData.filename.replace(/\.[^/.]+$/, "")}.vtt`
-        mimeType = "text/vtt"
-        break
-      case "json":
-        content = JSON.stringify(captionData.formats.json, null, 2)
-        filename = `${captionData.filename.replace(/\.[^/.]+$/, "")}.json`
-        mimeType = "application/json"
-        break
-    }
+  //   switch (format) {
+  //     case "srt":
+  //       content = captionData.formats.srt
+  //       filename = `${captionData.filename.replace(/\.[^/.]+$/, "")}.srt`
+  //       mimeType = "text/plain"
+  //       break
+  //     case "vtt":
+  //       content = captionData.formats.vtt
+  //       filename = `${captionData.filename.replace(/\.[^/.]+$/, "")}.vtt`
+  //       mimeType = "text/vtt"
+  //       break
+  //     case "json":
+  //       content = JSON.stringify(captionData.formats.json, null, 2)
+  //       filename = `${captionData.filename.replace(/\.[^/.]+$/, "")}.json`
+  //       mimeType = "application/json"
+  //       break
+  //   }
 
-    const blob = new Blob([content], { type: mimeType })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = filename
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+  //   const blob = new Blob([content], { type: mimeType })
+  //   const url = URL.createObjectURL(blob)
+  //   const a = document.createElement("a")
+  //   a.href = url
+  //   a.download = filename
+  //   document.body.appendChild(a)
+  //   a.click()
+  //   document.body.removeChild(a)
+  //   URL.revokeObjectURL(url)
 
-    // Add download confirmation message
-    const downloadMessage: Message = {
-      id: Date.now().toString(),
-      role: "assistant",
-      content: `📥 Downloaded ${filename} successfully! The file has been saved to your downloads folder.`,
-      timestamp: new Date(),
-    }
-    setMessages((prev) => [...prev, downloadMessage])
-  }
+  //   // Add download confirmation message
+  //   const downloadMessage: Message = {
+  //     id: Date.now().toString(),
+  //     role: "assistant",
+  //     content: `📥 Downloaded ${filename} successfully! The file has been saved to your downloads folder.`,
+  //     timestamp: new Date(),
+  //   }
+  //   setMessages((prev) => [...prev, downloadMessage])
+  // }
 
-  const copyCaptions = async (format: "srt" | "vtt" | "json") => {
-    if (!captionData) return
+  // const copyCaptions = async (format: "srt" | "vtt" | "json") => {
+  //   if (!captionData) return
 
-    let content: string
-    switch (format) {
-      case "srt":
-        content = captionData.formats.srt
-        break
-      case "vtt":
-        content = captionData.formats.vtt
-        break
-      case "json":
-        content = JSON.stringify(captionData.formats.json, null, 2)
-        break
-    }
+  //   let content: string
+  //   switch (format) {
+  //     case "srt":
+  //       content = captionData.formats.srt
+  //       break
+  //     case "vtt":
+  //       content = captionData.formats.vtt
+  //       break
+  //     case "json":
+  //       content = JSON.stringify(captionData.formats.json, null, 2)
+  //       break
+  //   }
 
-    try {
-      await navigator.clipboard.writeText(content)
-      const copyMessage: Message = {
-        id: Date.now().toString(),
-        role: "assistant",
-        content: `📋 ${format.toUpperCase()} captions copied to clipboard!`,
-        timestamp: new Date(),
-      }
-      setMessages((prev) => [...prev, copyMessage])
-    } catch (error) {
-      console.error("Failed to copy to clipboard:", error)
-    }
-  }
+  //   try {
+  //     await navigator.clipboard.writeText(content)
+  //     const copyMessage: Message = {
+  //       id: Date.now().toString(),
+  //       role: "assistant",
+  //       content: `📋 ${format.toUpperCase()} captions copied to clipboard!`,
+  //       timestamp: new Date(),
+  //     }
+  //     setMessages((prev) => [...prev, copyMessage])
+  //   } catch (error) {
+  //     console.error("Failed to copy to clipboard:", error)
+  //   }
+  // }
 
   const sendMessage = async () => {
     if (!inputMessage.trim()) return
@@ -349,7 +324,15 @@ export default function Home() {
         prompt = "[No image uploaded] " + inputMessage;
       }
       // Optionally, you can add more context to the prompt here
-      const geminiResponse = await askGemini(prompt);
+
+      let geminiResponse: string; 
+
+      if (mode === "video") {
+        geminiResponse = await askGemini(prompt,context, vidCaptionData,mode);
+      } else {
+        geminiResponse = await askGemini(prompt,null, imgCaptionData, mode);
+      }
+      
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === tempId
@@ -521,78 +504,18 @@ export default function Home() {
                     <p className="text-sm text-blue-600 mt-2">
                       ✅ Image loaded! Ask me questions about what you see in the chat.
                     </p>
+                    <Button
+                      onClick={generateCaptions}
+                      disabled={isProcessing}
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                    >
+                      {isProcessing ? "Processing..." : "Generate Captions"}
+                    </Button>
                   </div>
                 </div>
               )}
 
-              {/* Caption Download Section - Only for video mode */}
-              {mode === "video" && captionData && (
-                <Card className="bg-green-50 border-green-200">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg text-green-800">Captions Ready!</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid grid-cols-3 gap-2">
-                      <Button
-                        onClick={() => downloadCaptions("srt")}
-                        variant="outline"
-                        size="sm"
-                        className="flex items-center gap-1"
-                      >
-                        <Download className="h-3 w-3" />
-                        SRT
-                      </Button>
-                      <Button
-                        onClick={() => downloadCaptions("vtt")}
-                        variant="outline"
-                        size="sm"
-                        className="flex items-center gap-1"
-                      >
-                        <Download className="h-3 w-3" />
-                        VTT
-                      </Button>
-                      <Button
-                        onClick={() => downloadCaptions("json")}
-                        variant="outline"
-                        size="sm"
-                        className="flex items-center gap-1"
-                      >
-                        <Download className="h-3 w-3" />
-                        JSON
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <Button
-                        onClick={() => copyCaptions("srt")}
-                        variant="ghost"
-                        size="sm"
-                        className="flex items-center gap-1"
-                      >
-                        <Copy className="h-3 w-3" />
-                        Copy SRT
-                      </Button>
-                      <Button
-                        onClick={() => copyCaptions("vtt")}
-                        variant="ghost"
-                        size="sm"
-                        className="flex items-center gap-1"
-                      >
-                        <Copy className="h-3 w-3" />
-                        Copy VTT
-                      </Button>
-                      <Button
-                        onClick={() => copyCaptions("json")}
-                        variant="ghost"
-                        size="sm"
-                        className="flex items-center gap-1"
-                      >
-                        <Copy className="h-3 w-3" />
-                        Copy JSON
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+              {/* Caption Download Section removed as requested */}
             </CardContent>
           </Card>
 
@@ -648,20 +571,20 @@ export default function Home() {
                       onChange={(e) => setInputMessage(e.target.value)}
                       placeholder={
                         mode === "video"
-                          ? "Ask about captioning, formats, or processing..."
-                          : selectedImage
-                            ? "Ask me about the image..."
-                            : "Upload an image first to start asking questions..."
+                          ?
+                          selectedVideo ? "Ask about captioning, formats, or processing..." : "Upload a video first to start asking questions..."
+                          : 
+                          selectedImage ? "Ask me about the image..." : "Upload an image first to start asking questions..."
                       }
                       onKeyPress={(e) => e.key === "Enter" && sendMessage()}
                       className="flex-1"
-                      disabled={mode === "image" && !selectedImage}
+                      disabled={(mode == 'video' && !selectedVideo) || (mode == 'image' && !selectedImage)}
                     />
                     <Button
                       onClick={sendMessage}
                       size="icon"
                       className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                      disabled={mode === "image" && !selectedImage}
+                      disabled={(mode == 'video' && !selectedVideo) || (mode == 'image' &&!selectedImage)}
                     >
                       <Send className="h-4 w-4" />
                     </Button>
