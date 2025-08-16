@@ -397,7 +397,7 @@ export default function Home() {
       <div className="container mx-auto px-4 py-6">
         <div className="max-w-5xl mx-auto space-y-6">
           {/* Upload Section - Smaller and at the top */}
-          <Card className="shadow-lg border-0 bg-white/90 backdrop-blur-sm">
+          <Card className="shadow-lg border-0 bg-white/30 backdrop-blur-sm mx-auto w-auto">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
                 {mode === "video" ? (
@@ -413,7 +413,7 @@ export default function Home() {
                 )}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 flex flex-row">
               {/* Upload Area - Smaller */}
               <div
                 className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors cursor-pointer w-1/2 mx-auto"
@@ -422,10 +422,9 @@ export default function Home() {
                 onClick={() => (mode === "video" ? fileInputRef.current?.click() : imageInputRef.current?.click())}
               >
                 {mode === "video" ? (
-                  <>
+                  <div className="flex flex-col items-center w-full">
                     <Upload className="h-6 w-6 text-gray-400 mx-auto mb-2" />
                     <p className="text-sm font-medium text-gray-700 mb-1">Drop your video here or click to browse</p>
-                    <p className="text-xs text-gray-500">Supports MP4, AVI, MOV, WebM (Max 500MB)</p>
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -433,9 +432,9 @@ export default function Home() {
                       onChange={handleVideoUpload}
                       className="hidden"
                     />
-                  </>
+                  </div>
                 ) : (
-                  <>
+                  <div className="flex flex-col items-center w-full">
                     <ImageIcon className="h-6 w-6 text-gray-400 mx-auto mb-2" />
                     <p className="text-sm font-medium text-gray-700 mb-1">Drop your image here or click to browse</p>
                     <p className="text-xs text-gray-500">Supports JPG, PNG, GIF, WebP (Max 10MB)</p>
@@ -446,13 +445,13 @@ export default function Home() {
                       onChange={handleImageUpload}
                       className="hidden"
                     />
-                  </>
+                  </div>
                 )}
               </div>
 
               {/* Media Preview - Smaller */}
               {mode === "video" && videoUrl && (
-                <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                <div className="flex flex-row items-center gap-4 p-3 bg-gray-50 rounded-lg">
                   <video
                     src={videoUrl}
                     controls
@@ -478,7 +477,7 @@ export default function Home() {
               )}
 
               {mode === "image" && imageUrl && (
-                <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                <div className="flex flex-col items-center gap-4 p-3 bg-gray-50 rounded-lg w-half">
                   <img
                     src={imageUrl || "/placeholder.svg"}
                     alt="Uploaded image"
@@ -507,8 +506,8 @@ export default function Home() {
           </Card>
 
           {/* Chat Section with Processing Steps */}
-          <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
-            <CardHeader className="pb-4">
+          <Card className="shadow-xl border-0 bg-white/30 backdrop-blur-sm">
+            <CardHeader className="pb-0 pt-2">
               <CardTitle className="flex items-center gap-2 text-xl">
                 <Bot className="h-6 w-6 text-indigo-600" />
                 AI Assistant
@@ -520,7 +519,7 @@ export default function Home() {
             <CardContent className="p-0">
               <div className="flex flex-col" style={{ height: "calc(100vh - 400px)" }}>
                 {/* Processing Steps */}
-                <div className="p-4 border-b bg-gray-50/50">
+                <div className="p-4 border-b">
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     <div className="flex items-center gap-2">
                       <div
@@ -569,7 +568,7 @@ export default function Home() {
                 </div>
 
                 {/* Messages */}
-                <ScrollArea ref={scrollAreaRef} className="flex-1 p-6">
+                <ScrollArea ref={scrollAreaRef} className="flex-1 p-3 ">
                   <div className="space-y-6">
                     {messages.map((message) => (
                       <div
@@ -583,11 +582,11 @@ export default function Home() {
                         )}
                         <div
                           className={`max-w-[75%] p-4 rounded-lg ${
-                            message.role === "user" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-900"
+                            message.role === "user" ? "bg-blue-600 text-white" : "bg-white text-gray-900"
                           }`}
                         >
                           <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
-                          <p className="text-xs opacity-70 mt-2">{message.timestamp.toLocaleTimeString()}</p>
+                          {/*<p className="text-xs opacity-70 mt-2">{message.timestamp.toLocaleTimeString()}</p>*/}
                         </div>
                         {message.role === "user" && (
                           <div className="p-2 bg-blue-600 rounded-full flex-shrink-0">
@@ -600,7 +599,7 @@ export default function Home() {
                 </ScrollArea>
 
                 {/* Input */}
-                <div className="p-6 border-t bg-gray-50/50">
+                <div className="p-2 border-t bg-gray-50/50">
                   <div className="flex gap-3">
                     <Input
                       value={inputMessage}

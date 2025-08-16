@@ -1,8 +1,8 @@
+import { kv } from "@vercel/kv";
+
 export const getVideoCaption = async (videoFile: File): Promise<any> => {
-  // Get the backend URL from the API
-  const urlResponse = await fetch("/api/caption", { method: "GET" });
-  const urlData = await urlResponse.json();
-  const backendUrl = urlData.url;
+
+  const backendUrl = await kv.get<string>("backendUrl");
   if (!backendUrl) {
     throw new Error("Backend URL is not set.");
   }
@@ -30,9 +30,10 @@ export const getVideoCaption = async (videoFile: File): Promise<any> => {
 
 
 export const getVideoContext = async (videoFile: File): Promise<string> => {
-  const urlResponse = await fetch("/api/caption", { method: "GET" });
-  const urlData = await urlResponse.json();
-  const backendUrl = urlData.url;
+  const backendUrl = await kv.get<string>("backendUrl");
+  if (!backendUrl) {
+    throw new Error("Backend URL is not set.");
+  }
   if (!backendUrl) {
     throw new Error("Backend URL is not set.");
   }
