@@ -1,5 +1,3 @@
-
-
 export const getVideoCaption = async (videoFile: File): Promise<any> => {
   // Get the backend URL from the API
   const urlResponse = await fetch("/api/caption", { method: "GET" });

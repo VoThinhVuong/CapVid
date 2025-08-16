@@ -1,15 +1,14 @@
 "use client"
 
 import type React from "react"
-
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { askGemini } from "@/lib/geminiService"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Upload, Video, Send, Bot, User, Sparkles, Download, Copy, ImageIcon } from "lucide-react"
-import { getVideoCaption, getVideoContext, getImageCaption} from "@/lib/vidcapService"
+import { Upload, Video, Send, Bot, User, Sparkles, ImageIcon, Check } from "lucide-react"
+import { getVideoCaption, getVideoContext, getImageCaption } from "@/lib/vidcapService"
 
 interface Message {
   id: string
@@ -19,6 +18,13 @@ interface Message {
 }
 
 type Mode = "video" | "image"
+
+interface ProcessingSteps {
+  videoMotion: boolean
+  keyFrames: boolean
+  audioTranscription: boolean
+  captionGenerated: boolean
+}
 
 export default function Home() {
   const [mode, setMode] = useState<Mode>("video")
@@ -48,19 +54,36 @@ export default function Home() {
   ])
   const [inputMessage, setInputMessage] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
-  const [imgCaptionData, setImgCaptionData] = useState< string >("")
-  const [vidCaptionData, setVidCaptionData] = useState< string >("")
+  const [imgCaptionData, setImgCaptionData] = useState<string>("")
+  const [vidCaptionData, setVidCaptionData] = useState<string>("")
+  const [processingSteps, setProcessingSteps] = useState<ProcessingSteps>({
+    videoMotion: false,
+    keyFrames: false,
+    audioTranscription: false,
+    captionGenerated: false,
+  })
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
 
   // Helper to get/set messages based on mode
-  const messages = mode === "video" ? videoMessages : imageMessages;
-  const setMessages = mode === "video" ? setVideoMessages : setImageMessages;
+  const messages = mode === "video" ? videoMessages : imageMessages
+  const setMessages = mode === "video" ? setVideoMessages : setImageMessages
+
+  const resetProcessingSteps = () => {
+    setProcessingSteps({
+      videoMotion: false,
+      keyFrames: false,
+      audioTranscription: false,
+      captionGenerated: false,
+    })
+  }
 
   const handleModeSwitch = (newMode: Mode) => {
     setMode(newMode)
     // Reset state when switching modes
     setIsProcessing(false)
+    resetProcessingSteps()
 
     // Add a welcome message to the new mode's chat history
     const welcomeMessage: Message = {
@@ -75,7 +98,7 @@ export default function Home() {
     if (newMode === "video") {
       setVideoMessages((prev) => [...prev])
     } else {
-      setImageMessages((prev) => [...prev ])
+      setImageMessages((prev) => [...prev])
     }
   }
 
@@ -85,6 +108,7 @@ export default function Home() {
       setSelectedVideo(file)
       const url = URL.createObjectURL(file)
       setVideoUrl(url)
+      resetProcessingSteps() // Reset checkboxes when new video is uploaded
 
       // Add message about video upload
       const newMessage: Message = {
@@ -103,6 +127,7 @@ export default function Home() {
       setSelectedImage(file)
       const url = URL.createObjectURL(file)
       setImageUrl(url)
+      resetProcessingSteps() // Reset checkboxes when new image is uploaded
 
       // Add message about image upload
       const newMessage: Message = {
@@ -127,7 +152,7 @@ export default function Home() {
       setSelectedVideo(file)
       const url = URL.createObjectURL(file)
       setVideoUrl(url)
-      // Reset previous captions
+      resetProcessingSteps() // Reset checkboxes when new video is dropped
 
       const newMessage: Message = {
         id: Date.now().toString(),
@@ -140,6 +165,7 @@ export default function Home() {
       setSelectedImage(file)
       const url = URL.createObjectURL(file)
       setImageUrl(url)
+      resetProcessingSteps() // Reset checkboxes when new image is dropped
 
       const newMessage: Message = {
         id: Date.now().toString(),
@@ -152,26 +178,65 @@ export default function Home() {
   }
 
   const generateCaptions = async () => {
-    if (!selectedVideo) return
+    if (!selectedVideo && !selectedImage) return
 
     setIsProcessing(true)
+    resetProcessingSteps() // Reset all checkboxes at start
 
     // Add processing message
     const processingMessage: Message = {
       id: Date.now().toString(),
       role: "assistant",
-      content: "🔄 Processing your video with AI... This may take a few moments depending on the file size.",
+      content:
+        mode === "video"
+          ? "🔄 Processing your video with AI... This may take a few moments depending on the file size."
+          : "🔄 Processing your image with AI... This may take a few moments.",
       timestamp: new Date(),
     }
     setMessages((prev) => [...prev, processingMessage])
 
     try {
-      // Create FormData and append the video file
-      const formData = new FormData()
-      formData.append("video", selectedVideo)
+      // Simulate processing steps with 1s delays
+      if (mode === "video") {
+        // Step 1: Video motion extracted
+        setTimeout(() => {
+          setProcessingSteps((prev) => ({ ...prev, videoMotion: true }))
+        }, 1000)
 
-      // Call the API
-      if(mode === "video") {
+        // Step 2: Key frames extracted
+        setTimeout(() => {
+          setProcessingSteps((prev) => ({ ...prev, keyFrames: true }))
+        }, 2000)
+
+        // Step 3: Audio transcription extracted
+        setTimeout(() => {
+          setProcessingSteps((prev) => ({ ...prev, audioTranscription: true }))
+        }, 3000)
+
+        // Step 4: Caption generated
+        setTimeout(() => {
+          setProcessingSteps((prev) => ({ ...prev, captionGenerated: true }))
+        }, 4000)
+      } else {
+        // For image mode, we'll use different steps but same timing
+        setTimeout(() => {
+          setProcessingSteps((prev) => ({ ...prev, videoMotion: true }))
+        }, 1000)
+
+        setTimeout(() => {
+          setProcessingSteps((prev) => ({ ...prev, keyFrames: true }))
+        }, 2000)
+
+        setTimeout(() => {
+          setProcessingSteps((prev) => ({ ...prev, audioTranscription: true }))
+        }, 3000)
+
+        setTimeout(() => {
+          setProcessingSteps((prev) => ({ ...prev, captionGenerated: true }))
+        }, 4000)
+      }
+
+      if (mode === "video" && selectedVideo) {
         const caption = await getVideoCaption(selectedVideo)
         const context = await getVideoContext(selectedVideo)
 
@@ -185,10 +250,8 @@ export default function Home() {
           timestamp: new Date(),
         }
         setMessages((prev) => [...prev, successMessage])
-
-      }
-      else {
-        const caption = await getImageCaption(selectedVideo)
+      } else if (mode === "image" && selectedImage) {
+        const caption = await getImageCaption(selectedImage)
 
         setImgCaptionData(caption)
 
@@ -200,16 +263,13 @@ export default function Home() {
         }
         setMessages((prev) => [...prev, successMessage])
       }
-
-        // Add success message with caption preview
-
     } catch (error) {
       console.error("Error generating captions:", error)
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
         content:
-          "❌ An unexpected error occurred while processing your video. Please check your connection and try again.",
+          "❌ An unexpected error occurred while processing your media. Please check your connection and try again.",
         timestamp: new Date(),
       }
       setMessages((prev) => [...prev, errorMessage])
@@ -217,81 +277,6 @@ export default function Home() {
       setIsProcessing(false)
     }
   }
-
-  // const downloadCaptions = (format: "srt" | "vtt" | "json") => {
-  //   if (!captionData) return
-
-  //   let content: string
-  //   let filename: string
-  //   let mimeType: string
-
-  //   switch (format) {
-  //     case "srt":
-  //       content = captionData.formats.srt
-  //       filename = `${captionData.filename.replace(/\.[^/.]+$/, "")}.srt`
-  //       mimeType = "text/plain"
-  //       break
-  //     case "vtt":
-  //       content = captionData.formats.vtt
-  //       filename = `${captionData.filename.replace(/\.[^/.]+$/, "")}.vtt`
-  //       mimeType = "text/vtt"
-  //       break
-  //     case "json":
-  //       content = JSON.stringify(captionData.formats.json, null, 2)
-  //       filename = `${captionData.filename.replace(/\.[^/.]+$/, "")}.json`
-  //       mimeType = "application/json"
-  //       break
-  //   }
-
-  //   const blob = new Blob([content], { type: mimeType })
-  //   const url = URL.createObjectURL(blob)
-  //   const a = document.createElement("a")
-  //   a.href = url
-  //   a.download = filename
-  //   document.body.appendChild(a)
-  //   a.click()
-  //   document.body.removeChild(a)
-  //   URL.revokeObjectURL(url)
-
-  //   // Add download confirmation message
-  //   const downloadMessage: Message = {
-  //     id: Date.now().toString(),
-  //     role: "assistant",
-  //     content: `📥 Downloaded ${filename} successfully! The file has been saved to your downloads folder.`,
-  //     timestamp: new Date(),
-  //   }
-  //   setMessages((prev) => [...prev, downloadMessage])
-  // }
-
-  // const copyCaptions = async (format: "srt" | "vtt" | "json") => {
-  //   if (!captionData) return
-
-  //   let content: string
-  //   switch (format) {
-  //     case "srt":
-  //       content = captionData.formats.srt
-  //       break
-  //     case "vtt":
-  //       content = captionData.formats.vtt
-  //       break
-  //     case "json":
-  //       content = JSON.stringify(captionData.formats.json, null, 2)
-  //       break
-  //   }
-
-  //   try {
-  //     await navigator.clipboard.writeText(content)
-  //     const copyMessage: Message = {
-  //       id: Date.now().toString(),
-  //       role: "assistant",
-  //       content: `📋 ${format.toUpperCase()} captions copied to clipboard!`,
-  //       timestamp: new Date(),
-  //     }
-  //     setMessages((prev) => [...prev, copyMessage])
-  //   } catch (error) {
-  //     console.error("Failed to copy to clipboard:", error)
-  //   }
-  // }
 
   const sendMessage = async () => {
     if (!inputMessage.trim()) return
@@ -307,7 +292,7 @@ export default function Home() {
     setInputMessage("")
 
     // Show a temporary assistant message while waiting for Gemini
-    const tempId = (Date.now() + 1).toString();
+    const tempId = (Date.now() + 1).toString()
     setMessages((prev) => [
       ...prev,
       {
@@ -319,43 +304,52 @@ export default function Home() {
     ])
 
     try {
-      let prompt = inputMessage;
+      let prompt = inputMessage
       if (mode === "image" && !selectedImage) {
-        prompt = "[No image uploaded] " + inputMessage;
+        prompt = "[No image uploaded] " + inputMessage
       }
       // Optionally, you can add more context to the prompt here
 
-      let geminiResponse: string; 
+      let geminiResponse: string
 
       if (mode === "video") {
-        geminiResponse = await askGemini(prompt,context, vidCaptionData,mode);
+        geminiResponse = await askGemini(prompt, context, vidCaptionData, mode)
       } else {
-        geminiResponse = await askGemini(prompt,null, imgCaptionData, mode);
+        geminiResponse = await askGemini(prompt, null, imgCaptionData, mode)
       }
-      
+
       setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === tempId
-            ? { ...msg, content: geminiResponse, timestamp: new Date() }
-            : msg
-        )
-      );
+        prev.map((msg) => (msg.id === tempId ? { ...msg, content: geminiResponse, timestamp: new Date() } : msg)),
+      )
     } catch (error) {
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === tempId
             ? { ...msg, content: "❌ Error: Failed to get response from Gemini API.", timestamp: new Date() }
-            : msg
-        )
-      );
+            : msg,
+        ),
+      )
     }
   }
+
+  // Auto-scroll chat to bottom when new messages arrive with smooth animation
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      const scrollContainer = scrollAreaRef.current.querySelector("[data-radix-scroll-area-viewport]")
+      if (scrollContainer) {
+        scrollContainer.scrollTo({
+          top: scrollContainer.scrollHeight,
+          behavior: "smooth",
+        })
+      }
+    }
+  }, [messages])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       {/* Header */}
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg">
@@ -382,7 +376,6 @@ export default function Home() {
                 }`}
               >
                 <Video className="h-4 w-4" />
-                Video Captions
               </Button>
               <Button
                 onClick={() => handleModeSwitch("image")}
@@ -395,7 +388,6 @@ export default function Home() {
                 }`}
               >
                 <ImageIcon className="h-4 w-4" />
-                Image VQA
               </Button>
             </div>
           </div>
@@ -403,11 +395,11 @@ export default function Home() {
       </header>
 
       <div className="container mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
-          {/* Upload Section */}
-          <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-xl">
+        <div className="max-w-5xl mx-auto space-y-8">
+          {/* Upload Section - Smaller and at the top */}
+          <Card className="shadow-lg border-0 bg-white/90 backdrop-blur-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 {mode === "video" ? (
                   <>
                     <Video className="h-5 w-5 text-blue-600" />
@@ -421,19 +413,19 @@ export default function Home() {
                 )}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Upload Area */}
+            <CardContent className="space-y-4">
+              {/* Upload Area - Smaller */}
               <div
-                className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors cursor-pointer"
+                className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors cursor-pointer w-1/2 mx-auto"
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
                 onClick={() => (mode === "video" ? fileInputRef.current?.click() : imageInputRef.current?.click())}
               >
                 {mode === "video" ? (
                   <>
-                    <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-lg font-medium text-gray-700 mb-2">Drop your video here or click to browse</p>
-                    <p className="text-sm text-gray-500">Supports MP4, AVI, MOV, WebM (Max 500MB)</p>
+                    <Upload className="h-6 w-6 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm font-medium text-gray-700 mb-1">Drop your video here or click to browse</p>
+                    <p className="text-xs text-gray-500">Supports MP4, AVI, MOV, WebM (Max 500MB)</p>
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -444,9 +436,9 @@ export default function Home() {
                   </>
                 ) : (
                   <>
-                    <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-lg font-medium text-gray-700 mb-2">Drop your image here or click to browse</p>
-                    <p className="text-sm text-gray-500">Supports JPG, PNG, GIF, WebP (Max 10MB)</p>
+                    <ImageIcon className="h-6 w-6 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm font-medium text-gray-700 mb-1">Drop your image here or click to browse</p>
+                    <p className="text-xs text-gray-500">Supports JPG, PNG, GIF, WebP (Max 10MB)</p>
                     <input
                       ref={imageInputRef}
                       type="file"
@@ -458,28 +450,26 @@ export default function Home() {
                 )}
               </div>
 
-              {/* Media Preview */}
+              {/* Media Preview - Smaller */}
               {mode === "video" && videoUrl && (
-                <div className="space-y-4">
+                <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
                   <video
                     src={videoUrl}
                     controls
                     autoPlay
                     muted
-                    className="w-full rounded-lg shadow-md"
-                    style={{ maxHeight: "300px" }}
+                    className="w-32 h-24 rounded-lg shadow-md object-cover flex-shrink-0"
                   />
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">{selectedVideo?.name}</p>
-                      <p className="text-sm text-gray-500">
-                        {selectedVideo && `${(selectedVideo.size / 1024 / 1024).toFixed(1)} MB`}
-                      </p>
-                    </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 text-sm truncate">{selectedVideo?.name}</p>
+                    <p className="text-xs text-gray-500">
+                      {selectedVideo && `${(selectedVideo.size / 1024 / 1024).toFixed(1)} MB`}
+                    </p>
                     <Button
                       onClick={generateCaptions}
                       disabled={isProcessing}
-                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 mt-2"
+                      size="sm"
                     >
                       {isProcessing ? "Processing..." : "Generate Captions"}
                     </Button>
@@ -488,42 +478,39 @@ export default function Home() {
               )}
 
               {mode === "image" && imageUrl && (
-                <div className="space-y-4">
+                <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
                   <img
                     src={imageUrl || "/placeholder.svg"}
                     alt="Uploaded image"
-                    className="w-full rounded-lg shadow-md max-h-80 object-contain bg-gray-50"
+                    className="w-32 h-24 rounded-lg shadow-md object-cover flex-shrink-0"
                   />
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">{selectedImage?.name}</p>
-                      <p className="text-sm text-gray-500">
-                        {selectedImage && `${(selectedImage.size / 1024 / 1024).toFixed(1)} MB`}
-                      </p>
-                    </div>
-                    <p className="text-sm text-blue-600 mt-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 text-sm truncate">{selectedImage?.name}</p>
+                    <p className="text-xs text-gray-500">
+                      {selectedImage && `${(selectedImage.size / 1024 / 1024).toFixed(1)} MB`}
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
                       ✅ Image loaded! Ask me questions about what you see in the chat.
                     </p>
                     <Button
                       onClick={generateCaptions}
                       disabled={isProcessing}
-                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 mt-2"
+                      size="sm"
                     >
                       {isProcessing ? "Processing..." : "Generate Captions"}
                     </Button>
                   </div>
                 </div>
               )}
-
-              {/* Caption Download Section removed as requested */}
             </CardContent>
           </Card>
 
-          {/* Chat Section */}
+          {/* Chat Section - Bigger and in the center */}
           <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-xl">
-                <Bot className="h-5 w-5 text-indigo-600" />
+                <Bot className="h-6 w-6 text-indigo-600" />
                 AI Assistant
                 <span className="text-sm font-normal text-gray-500 ml-2">
                   ({mode === "video" ? "Video Captioning" : "Image VQA"})
@@ -531,31 +518,31 @@ export default function Home() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="flex flex-col h-[500px]">
+              <div className="flex flex-col h-[700px]">
                 {/* Messages */}
-                <ScrollArea className="flex-1 p-4">
-                  <div className="space-y-4">
+                <ScrollArea ref={scrollAreaRef} className="flex-1 p-6">
+                  <div className="space-y-6">
                     {messages.map((message) => (
                       <div
                         key={message.id}
-                        className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                        className={`flex gap-4 ${message.role === "user" ? "justify-end" : "justify-start"}`}
                       >
                         {message.role === "assistant" && (
-                          <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full">
-                            <Bot className="h-4 w-4 text-white" />
+                          <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex-shrink-0">
+                            <Bot className="h-5 w-5 text-white" />
                           </div>
                         )}
                         <div
-                          className={`max-w-[80%] p-3 rounded-lg ${
+                          className={`max-w-[75%] p-4 rounded-lg ${
                             message.role === "user" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-900"
                           }`}
                         >
-                          <p className="whitespace-pre-wrap">{message.content}</p>
-                          <p className="text-xs opacity-70 mt-1">{message.timestamp.toLocaleTimeString()}</p>
+                          <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
+                          <p className="text-xs opacity-70 mt-2">{message.timestamp.toLocaleTimeString()}</p>
                         </div>
                         {message.role === "user" && (
-                          <div className="p-2 bg-blue-600 rounded-full">
-                            <User className="h-4 w-4 text-white" />
+                          <div className="p-2 bg-blue-600 rounded-full flex-shrink-0">
+                            <User className="h-5 w-5 text-white" />
                           </div>
                         )}
                       </div>
@@ -564,29 +551,31 @@ export default function Home() {
                 </ScrollArea>
 
                 {/* Input */}
-                <div className="p-4 border-t bg-gray-50/50">
-                  <div className="flex gap-2">
+                <div className="p-6 border-t bg-gray-50/50">
+                  <div className="flex gap-3">
                     <Input
                       value={inputMessage}
                       onChange={(e) => setInputMessage(e.target.value)}
                       placeholder={
                         mode === "video"
-                          ?
-                          selectedVideo ? "Ask about captioning, formats, or processing..." : "Upload a video first to start asking questions..."
-                          : 
-                          selectedImage ? "Ask me about the image..." : "Upload an image first to start asking questions..."
+                          ? selectedVideo
+                            ? "Ask about captioning, formats, or processing..."
+                            : "Upload a video first to start asking questions..."
+                          : selectedImage
+                            ? "Ask me about the image..."
+                            : "Upload an image first to start asking questions..."
                       }
                       onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-                      className="flex-1"
-                      disabled={(mode == 'video' && !selectedVideo) || (mode == 'image' && !selectedImage)}
+                      className="flex-1 h-12"
+                      disabled={(mode == "video" && !selectedVideo) || (mode == "image" && !selectedImage)}
                     />
                     <Button
                       onClick={sendMessage}
                       size="icon"
-                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                      disabled={(mode == 'video' && !selectedVideo) || (mode == 'image' &&!selectedImage)}
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 h-12 w-12"
+                      disabled={(mode == "video" && !selectedVideo) || (mode == "image" && !selectedImage)}
                     >
-                      <Send className="h-4 w-4" />
+                      <Send className="h-5 w-5" />
                     </Button>
                   </div>
                 </div>
@@ -595,32 +584,67 @@ export default function Home() {
           </Card>
         </div>
 
-        {/* Features Section */}
-        <div className="mt-16 grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-          <Card className="text-center p-6 bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-            <div className="p-3 bg-blue-100 rounded-full w-fit mx-auto mb-4">
-              <Sparkles className="h-6 w-6 text-blue-600" />
-            </div>
-            <h3 className="font-semibold text-lg mb-2">AI-Powered Analysis</h3>
-            <p className="text-gray-600 text-sm">
-              Advanced AI for video captioning and image understanding with 95%+ accuracy
-            </p>
-          </Card>
+        {/* Processing Steps Section */}
+        <div className="mt-16 max-w-4xl mx-auto">
+          <Card className="shadow-lg border-0 bg-white/90 backdrop-blur-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-center text-xl">Processing Steps</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                  <div
+                    className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all duration-300 ${
+                      processingSteps.videoMotion ? "bg-green-500 border-green-500" : "border-gray-300"
+                    }`}
+                  >
+                    {processingSteps.videoMotion && <Check className="h-4 w-4 text-white" />}
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">Video motion extracted</p>
+                  </div>
+                </div>
 
-          <Card className="text-center p-6 bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-            <div className="p-3 bg-indigo-100 rounded-full w-fit mx-auto mb-4">
-              <Video className="h-6 w-6 text-indigo-600" />
-            </div>
-            <h3 className="font-semibold text-lg mb-2">Dual Mode Support</h3>
-            <p className="text-gray-600 text-sm">Switch between video captioning and image VQA modes seamlessly</p>
-          </Card>
+                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                  <div
+                    className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all duration-300 ${
+                      processingSteps.keyFrames ? "bg-green-500 border-green-500" : "border-gray-300"
+                    }`}
+                  >
+                    {processingSteps.keyFrames && <Check className="h-4 w-4 text-white" />}
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">Key Frames extracted</p>
+                  </div>
+                </div>
 
-          <Card className="text-center p-6 bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-            <div className="p-3 bg-purple-100 rounded-full w-fit mx-auto mb-4">
-              <Bot className="h-6 w-6 text-purple-600" />
-            </div>
-            <h3 className="font-semibold text-lg mb-2">Interactive Chat</h3>
-            <p className="text-gray-600 text-sm">Ask questions and get instant AI-powered responses about your media</p>
+                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                  <div
+                    className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all duration-300 ${
+                      processingSteps.audioTranscription ? "bg-green-500 border-green-500" : "border-gray-300"
+                    }`}
+                  >
+                    {processingSteps.audioTranscription && <Check className="h-4 w-4 text-white" />}
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">Audio transcription extracted</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                  <div
+                    className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all duration-300 ${
+                      processingSteps.captionGenerated ? "bg-green-500 border-green-500" : "border-gray-300"
+                    }`}
+                  >
+                    {processingSteps.captionGenerated && <Check className="h-4 w-4 text-white" />}
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">Caption generated</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
           </Card>
         </div>
       </div>
