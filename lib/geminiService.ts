@@ -3,7 +3,7 @@
 export async function askGemini(prompt: string, context: string | null, caption: string | null, mode: "video" | "image"): Promise<string> {
   // Replace with your Gemini API endpoint and API key
   const { GoogleGenAI } = await import("@google/genai");
-  const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
   if (!GEMINI_API_KEY) {
     throw new Error("Gemini API key is not set.");
   }
