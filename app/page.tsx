@@ -394,8 +394,8 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-5xl mx-auto space-y-8">
+      <div className="container mx-auto px-4 py-6">
+        <div className="max-w-5xl mx-auto space-y-6">
           {/* Upload Section - Smaller and at the top */}
           <Card className="shadow-lg border-0 bg-white/90 backdrop-blur-sm">
             <CardHeader className="pb-3">
@@ -506,7 +506,7 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          {/* Chat Section - Bigger and in the center */}
+          {/* Chat Section with Processing Steps */}
           <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-xl">
@@ -518,7 +518,56 @@ export default function Home() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="flex flex-col h-[700px]">
+              <div className="flex flex-col" style={{ height: "calc(100vh - 400px)" }}>
+                {/* Processing Steps */}
+                <div className="p-4 border-b bg-gray-50/50">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-300 ${
+                          processingSteps.videoMotion ? "bg-green-500 border-green-500" : "border-gray-300"
+                        }`}
+                      >
+                        {processingSteps.videoMotion && <Check className="h-3 w-3 text-white" />}
+                      </div>
+                      <p className="text-xs font-medium">Video motion extracted</p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-300 ${
+                          processingSteps.keyFrames ? "bg-green-500 border-green-500" : "border-gray-300"
+                        }`}
+                      >
+                        {processingSteps.keyFrames && <Check className="h-3 w-3 text-white" />}
+                      </div>
+                      <p className="text-xs font-medium">Key Frames extracted</p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-300 ${
+                          processingSteps.audioTranscription ? "bg-green-500 border-green-500" : "border-gray-300"
+                        }`}
+                      >
+                        {processingSteps.audioTranscription && <Check className="h-3 w-3 text-white" />}
+                      </div>
+                      <p className="text-xs font-medium">Audio transcription extracted</p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-300 ${
+                          processingSteps.captionGenerated ? "bg-green-500 border-green-500" : "border-gray-300"
+                        }`}
+                      >
+                        {processingSteps.captionGenerated && <Check className="h-3 w-3 text-white" />}
+                      </div>
+                      <p className="text-xs font-medium">Caption generated</p>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Messages */}
                 <ScrollArea ref={scrollAreaRef} className="flex-1 p-6">
                   <div className="space-y-6">
@@ -577,70 +626,6 @@ export default function Home() {
                     >
                       <Send className="h-5 w-5" />
                     </Button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Processing Steps Section */}
-        <div className="mt-16 max-w-4xl mx-auto">
-          <Card className="shadow-lg border-0 bg-white/90 backdrop-blur-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-center text-xl">Processing Steps</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-                  <div
-                    className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all duration-300 ${
-                      processingSteps.videoMotion ? "bg-green-500 border-green-500" : "border-gray-300"
-                    }`}
-                  >
-                    {processingSteps.videoMotion && <Check className="h-4 w-4 text-white" />}
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm">Video motion extracted</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-                  <div
-                    className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all duration-300 ${
-                      processingSteps.keyFrames ? "bg-green-500 border-green-500" : "border-gray-300"
-                    }`}
-                  >
-                    {processingSteps.keyFrames && <Check className="h-4 w-4 text-white" />}
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm">Key Frames extracted</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-                  <div
-                    className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all duration-300 ${
-                      processingSteps.audioTranscription ? "bg-green-500 border-green-500" : "border-gray-300"
-                    }`}
-                  >
-                    {processingSteps.audioTranscription && <Check className="h-4 w-4 text-white" />}
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm">Audio transcription extracted</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-                  <div
-                    className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all duration-300 ${
-                      processingSteps.captionGenerated ? "bg-green-500 border-green-500" : "border-gray-300"
-                    }`}
-                  >
-                    {processingSteps.captionGenerated && <Check className="h-4 w-4 text-white" />}
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm">Caption generated</p>
                   </div>
                 </div>
               </div>
