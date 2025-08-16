@@ -313,9 +313,37 @@ export default function Home() {
       let geminiResponse: string
 
       if (mode === "video") {
-        geminiResponse = await askGemini(prompt, context, vidCaptionData, mode)
+        // geminiResponse = await askGemini(prompt, context, vidCaptionData, mode)
+        geminiResponse = await fetch("/api/gemini", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            prompt,
+            context,
+            caption: vidCaptionData,
+            mode,
+          }),
+        })
+          .then((res) => res.json())
+          .then((data) => data.response)
       } else {
-        geminiResponse = await askGemini(prompt, null, imgCaptionData, mode)
+        //geminiResponse = await askGemini(prompt, null, imgCaptionData, mode)
+        geminiResponse = await fetch("/api/gemini", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            prompt,
+            context: null,
+            caption: imgCaptionData,
+            mode,
+          }),
+        })
+          .then((res) => res.json())
+          .then((data) => data.response)
       }
 
       setMessages((prev) =>
