@@ -17,8 +17,8 @@ export async function askGemini(prompt: string, context: string | null, caption:
 
       Your task is to provide accurate and helpful responses based on the user's input and provided context.\n
 
-      ${mode} caption: ${caption}\n
-      ${mode} context: ${context}\n
+      ${mode} Keyframes: ${caption}\n
+      ${mode} Montion: ${context}\n
 
       prompt: ${prompt}
       `,

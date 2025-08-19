@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Upload, Video, Send, Bot, User, Sparkles, ImageIcon, Check } from "lucide-react"
-import { getVideoCaption, getVideoContext, getImageCaption } from "@/lib/vidcapService"
+import { getVideoPath, getImageProcess, getVideoProcess, getImageCaption } from "@/lib/vidcapService"
 
 interface Message {
   id: string
@@ -237,11 +237,12 @@ export default function Home() {
       }
 
       if (mode === "video" && selectedVideo) {
-        const caption = await getVideoCaption(selectedVideo)
-        //const context = await getVideoContext(selectedVideo)
+        const path = await getVideoPath(selectedVideo)
+        const caption = await getImageProcess(path)
+        const context = await getVideoProcess(path)
 
         setVidCaptionData(caption)
-        //setContext(context)
+        setContext(context)
 
         const successMessage: Message = {
           id: (Date.now() + 1).toString(),
@@ -313,37 +314,37 @@ export default function Home() {
       let geminiResponse: string
 
       if (mode === "video") {
-        // geminiResponse = await askGemini(prompt, context, vidCaptionData, mode)
-        geminiResponse = await fetch("/api/gemini", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            prompt,
-            //context,
-            caption: vidCaptionData,
-            mode,
-          }),
-        })
-          .then((res) => res.json())
-          .then((data) => data.response)
+        geminiResponse = await askGemini(prompt, context, vidCaptionData, mode)
+        // geminiResponse = await fetch("/api/gemini", {
+        //   method: "POST",
+        //   headers: {
+        //     "Content-Type": "application/json",
+        //   },
+        //   body: JSON.stringify({
+        //     prompt,
+        //     //context,
+        //     caption: vidCaptionData,
+        //     mode,
+        //   }),
+        // })
+        //   .then((res) => res.json())
+        //   .then((data) => data.response)
       } else {
-        //geminiResponse = await askGemini(prompt, null, imgCaptionData, mode)
-        geminiResponse = await fetch("/api/gemini", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            prompt,
-            context: null,
-            caption: imgCaptionData,
-            mode,
-          }),
-        })
-          .then((res) => res.json())
-          .then((data) => data.response)
+        geminiResponse = await askGemini(prompt, null, imgCaptionData, mode)
+        // geminiResponse = await fetch("/api/gemini", {
+        //   method: "POST",
+        //   headers: {
+        //     "Content-Type": "application/json",
+        //   },
+        //   body: JSON.stringify({
+        //     prompt,
+        //     context: null,
+        //     caption: imgCaptionData,
+        //     mode,
+        //   }),
+        // })
+        //   .then((res) => res.json())
+        //   .then((data) => data.response)
       }
 
       setMessages((prev) =>
