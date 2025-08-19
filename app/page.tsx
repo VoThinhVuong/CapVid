@@ -238,10 +238,10 @@ export default function Home() {
 
       if (mode === "video" && selectedVideo) {
         const caption = await getVideoCaption(selectedVideo)
-        const context = await getVideoContext(selectedVideo)
+        //const context = await getVideoContext(selectedVideo)
 
         setVidCaptionData(caption)
-        setContext(context)
+        //setContext(context)
 
         const successMessage: Message = {
           id: (Date.now() + 1).toString(),
@@ -321,7 +321,7 @@ export default function Home() {
           },
           body: JSON.stringify({
             prompt,
-            context,
+            //context,
             caption: vidCaptionData,
             mode,
           }),
