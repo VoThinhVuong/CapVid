@@ -13,12 +13,6 @@ export const getVideoPath = async (videoFile: File): Promise<any> => {
   const formData = new FormData();
   formData.append("file", videoFile);
   try {
-  // make a fetch based on the following example
-  // curl -X 'POST' \
-  // 'https://80e2b4dbf069.ngrok-free.app/upload' \
-  // -H 'accept: application/json' \
-  // -H 'Content-Type: multipart/form-data' \
-  // -F 'file=@lifting.mp4;type=video/mp4'
 
 
   const response = await fetch(`${backendUrl}/upload`, {
@@ -60,7 +54,7 @@ export const getImageProcess = async (path: string): Promise<any> => {
       throw new Error(`Error fetching caption: ${response.statusText}`);
     }
     const data = await response.json();
-    return data['result'];
+    return { ic: data['ic'], od: data['od'] };
 
     //return backendUrl;
   } catch (error) {
@@ -70,7 +64,7 @@ export const getImageProcess = async (path: string): Promise<any> => {
 }
 
 
-export const getVideoProcess = async (path: string): Promise<string> => {
+export const getVideoProcess = async (path: string): Promise<any> => {
   const urlResponse = await fetch("/api/caption", { method: "GET" });
   const urlData = await urlResponse.json();
   const backendUrl = urlData.url;
@@ -91,7 +85,7 @@ export const getVideoProcess = async (path: string): Promise<string> => {
       throw new Error(`Error fetching video context: ${response.statusText}`);
     }
     const data = await response.json();
-    return data['video_motion'];
+    return { video_motion: data['video_motion'], video_transcript: data['transcript'] };
     //return backendUrl;
   } catch (error) {
     console.error("Error in getVideoContext:", error);

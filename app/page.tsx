@@ -238,8 +238,11 @@ export default function Home() {
 
       if (mode === "video" && selectedVideo) {
         const path = await getVideoPath(selectedVideo)
-        const caption = await getImageProcess(path)
-        const context = await getVideoProcess(path)
+        const { ic, od } = await getImageProcess(path)
+        const { video_motion, video_transcript } = await getVideoProcess(path)
+
+        const caption = `Video Motion: ${video_motion} \nAudio Transcript: ${video_transcript}`
+        const context = `Key Frames caption: ${ic} \nObject Detection: ${od}`
 
         setVidCaptionData(caption)
         setContext(context)
@@ -247,7 +250,7 @@ export default function Home() {
         const successMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: vidCaptionData,
+          content: caption,
           timestamp: new Date(),
         }
         setMessages((prev) => [...prev, successMessage])
@@ -259,7 +262,7 @@ export default function Home() {
         const successMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: imgCaptionData,
+          content: caption,
           timestamp: new Date(),
         }
         setMessages((prev) => [...prev, successMessage])
