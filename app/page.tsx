@@ -250,7 +250,7 @@ export default function Home() {
         const caption = `Video Motion: ${video_motion} \nAudio Transcript: ${video_transcript}`
         const context = `Key Frames caption: ${ic} \nObject Detection: ${od}`
 
-        const msg = caption + "\n\n" + context
+        const msg = 'Video processing complete! Ask me questions about the video or its content.'
 
         setVidCaptionData(caption)
         setContext(context)
