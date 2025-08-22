@@ -55,6 +55,7 @@ export default function Home() {
   ])
   const [inputMessage, setInputMessage] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isChatProcessing, setIsChatProcessing] = useState(false) // Add this line
   const [imgCaptionData, setImgCaptionData] = useState<string>("")
   const [vidCaptionData, setVidCaptionData] = useState<string>("")
   const [processingSteps, setProcessingSteps] = useState<ProcessingSteps>({
@@ -84,6 +85,7 @@ export default function Home() {
     setMode(newMode)
     // Reset state when switching modes
     setIsProcessing(false)
+    setIsChatProcessing(false) // Add this line
     resetProcessingSteps()
 
     // Add a welcome message to the new mode's chat history
@@ -182,6 +184,7 @@ export default function Home() {
     if (!selectedVideo && !selectedImage) return
 
     setIsProcessing(true)
+    setIsChatProcessing(true) // Add this line
     resetProcessingSteps() // Reset all checkboxes at start
 
     // Add processing message with loading indicator
@@ -287,11 +290,14 @@ export default function Home() {
       )
     } finally {
       setIsProcessing(false)
+      setIsChatProcessing(false) // Add this line
     }
   }
 
   const sendMessage = async () => {
     if (!inputMessage.trim()) return
+
+    setIsChatProcessing(true) // Add this line
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -377,6 +383,8 @@ export default function Home() {
             : msg,
         ),
       )
+    } finally {
+      setIsChatProcessing(false) // Add this line
     }
   }
 
@@ -664,21 +672,29 @@ export default function Home() {
                       placeholder={
                         mode === "video"
                           ? selectedVideo
-                            ? "Ask about captioning, formats, or processing..."
+                            ? isChatProcessing
+                              ? "Processing... Please wait"
+                              : "Ask about captioning, formats, or processing..."
                             : "Upload a video first to start asking questions..."
                           : selectedImage
-                            ? "Ask me about the image..."
+                            ? isChatProcessing
+                              ? "Processing... Please wait"
+                              : "Ask me about the image..."
                             : "Upload an image first to start asking questions..."
                       }
-                      onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+                      onKeyPress={(e) => e.key === "Enter" && !isChatProcessing && sendMessage()}
                       className="flex-1 h-12"
-                      disabled={(mode == "video" && !selectedVideo) || (mode == "image" && !selectedImage)}
+                      disabled={
+                        (mode == "video" && !selectedVideo) || (mode == "image" && !selectedImage) || isChatProcessing
+                      }
                     />
                     <Button
                       onClick={sendMessage}
                       size="icon"
                       className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 h-12 w-12"
-                      disabled={(mode == "video" && !selectedVideo) || (mode == "image" && !selectedImage)}
+                      disabled={
+                        (mode == "video" && !selectedVideo) || (mode == "image" && !selectedImage) || isChatProcessing
+                      }
                     >
                       <Send className="h-5 w-5" />
                     </Button>
