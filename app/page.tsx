@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Upload, Video, Send, Bot, User, Sparkles, ImageIcon, Check } from "lucide-react"
+import { Upload, Video, Send, Bot, User, Sparkles, ImageIcon, Check, Loader2 } from "lucide-react"
 import { getVideoPath, getImageProcess, getVideoProcess, getImageCaption } from "@/lib/vidcapService"
 
 interface Message {
@@ -15,6 +15,7 @@ interface Message {
   role: "user" | "assistant"
   content: string
   timestamp: Date
+  isLoading?: boolean
 }
 
 type Mode = "video" | "image"
@@ -183,15 +184,17 @@ export default function Home() {
     setIsProcessing(true)
     resetProcessingSteps() // Reset all checkboxes at start
 
-    // Add processing message
+    // Add processing message with loading indicator
+    const processingMessageId = Date.now().toString()
     const processingMessage: Message = {
-      id: Date.now().toString(),
+      id: processingMessageId,
       role: "assistant",
       content:
         mode === "video"
-          ? "🔄 Processing your video with AI... This may take a few moments depending on the file size."
-          : "🔄 Processing your image with AI... This may take a few moments.",
+          ? "Processing your video with AI... This may take a few moments depending on the file size."
+          : "Processing your image with AI... This may take a few moments.",
       timestamp: new Date(),
+      isLoading: true,
     }
     setMessages((prev) => [...prev, processingMessage])
 
@@ -249,36 +252,39 @@ export default function Home() {
         setVidCaptionData(caption)
         setContext(context)
 
-        const successMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: msg,
-          timestamp: new Date(),
-        }
-        setMessages((prev) => [...prev, successMessage])
+        // Remove loading indicator and update with success message
+        setMessages((prev) =>
+          prev.map((message) =>
+            message.id === processingMessageId ? { ...message, content: msg, isLoading: false } : message,
+          ),
+        )
       } else if (mode === "image" && selectedImage) {
         const caption = await getImageCaption(selectedImage)
         const msg = caption
         setImgCaptionData(caption)
 
-        const successMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: msg,
-          timestamp: new Date(),
-        }
-        setMessages((prev) => [...prev, successMessage])
+        // Remove loading indicator and update with success message
+        setMessages((prev) =>
+          prev.map((message) =>
+            message.id === processingMessageId ? { ...message, content: msg, isLoading: false } : message,
+          ),
+        )
       }
     } catch (error) {
       console.error("Error generating captions:", error)
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content:
-          "❌ An unexpected error occurred while processing your media. Please check your connection and try again.",
-        timestamp: new Date(),
-      }
-      setMessages((prev) => [...prev, errorMessage])
+      // Remove loading indicator and show error message
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.id === processingMessageId
+            ? {
+                ...message,
+                content:
+                  "❌ An unexpected error occurred while processing your media. Please check your connection and try again.",
+                isLoading: false,
+              }
+            : message,
+        ),
+      )
     } finally {
       setIsProcessing(false)
     }
@@ -297,7 +303,7 @@ export default function Home() {
     setMessages((prev) => [...prev, userMessage])
     setInputMessage("")
 
-    // Show a temporary assistant message while waiting for Gemini
+    // Show a temporary assistant message while waiting for Gemini with loading indicator
     const tempId = (Date.now() + 1).toString()
     setMessages((prev) => [
       ...prev,
@@ -306,6 +312,7 @@ export default function Home() {
         role: "assistant",
         content: "Thinking...",
         timestamp: new Date(),
+        isLoading: true,
       },
     ])
 
@@ -353,13 +360,20 @@ export default function Home() {
       }
 
       setMessages((prev) =>
-        prev.map((msg) => (msg.id === tempId ? { ...msg, content: geminiResponse, timestamp: new Date() } : msg)),
+        prev.map((msg) =>
+          msg.id === tempId ? { ...msg, content: geminiResponse, timestamp: new Date(), isLoading: false } : msg,
+        ),
       )
     } catch (error) {
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === tempId
-            ? { ...msg, content: "❌ Error: Failed to get response from Gemini API.", timestamp: new Date() }
+            ? {
+                ...msg,
+                content: "❌ Error: Failed to get response from Gemini API.",
+                timestamp: new Date(),
+                isLoading: false,
+              }
             : msg,
         ),
       )
@@ -611,7 +625,11 @@ export default function Home() {
                       >
                         {message.role === "assistant" && (
                           <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex-shrink-0">
-                            <Bot className="h-5 w-5 text-white" />
+                            {message.isLoading ? (
+                              <Loader2 className="h-5 w-5 text-white animate-spin" />
+                            ) : (
+                              <Bot className="h-5 w-5 text-white" />
+                            )}
                           </div>
                         )}
                         <div
@@ -619,7 +637,12 @@ export default function Home() {
                             message.role === "user" ? "bg-blue-600 text-white" : "bg-white text-gray-900"
                           }`}
                         >
-                          <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
+                          <div className="flex items-start gap-2">
+                            <p className="whitespace-pre-wrap text-sm leading-relaxed flex-1">{message.content}</p>
+                            {message.isLoading && message.role === "assistant" && (
+                              <Loader2 className="h-4 w-4 text-gray-500 animate-spin flex-shrink-0 mt-0.5" />
+                            )}
+                          </div>
                           {/*<p className="text-xs opacity-70 mt-2">{message.timestamp.toLocaleTimeString()}</p>*/}
                         </div>
                         {message.role === "user" && (
