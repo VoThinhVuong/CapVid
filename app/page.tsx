@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useRef, useEffect } from "react"
-import { askGemini } from "@/lib/geminiService"
+//import { askGemini } from "@/lib/geminiService"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -244,25 +244,27 @@ export default function Home() {
         const caption = `Video Motion: ${video_motion} \nAudio Transcript: ${video_transcript}`
         const context = `Key Frames caption: ${ic} \nObject Detection: ${od}`
 
+        const msg = caption + "\n\n" + context
+
         setVidCaptionData(caption)
         setContext(context)
 
         const successMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: caption,
+          content: msg,
           timestamp: new Date(),
         }
         setMessages((prev) => [...prev, successMessage])
       } else if (mode === "image" && selectedImage) {
         const caption = await getImageCaption(selectedImage)
-
+        const msg = caption
         setImgCaptionData(caption)
 
         const successMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: caption,
+          content: msg,
           timestamp: new Date(),
         }
         setMessages((prev) => [...prev, successMessage])
@@ -317,37 +319,37 @@ export default function Home() {
       let geminiResponse: string
 
       if (mode === "video") {
-        geminiResponse = await askGemini(prompt, context, vidCaptionData, mode)
-        // geminiResponse = await fetch("/api/gemini", {
-        //   method: "POST",
-        //   headers: {
-        //     "Content-Type": "application/json",
-        //   },
-        //   body: JSON.stringify({
-        //     prompt,
-        //     //context,
-        //     caption: vidCaptionData,
-        //     mode,
-        //   }),
-        // })
-        //   .then((res) => res.json())
-        //   .then((data) => data.response)
+        //geminiResponse = await askGemini(prompt, context, vidCaptionData, mode)
+        geminiResponse = await fetch("/api/gemini", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            prompt,
+            context,
+            caption: vidCaptionData,
+            mode,
+          }),
+        })
+          .then((res) => res.json())
+          .then((data) => data.response)
       } else {
-        geminiResponse = await askGemini(prompt, null, imgCaptionData, mode)
-        // geminiResponse = await fetch("/api/gemini", {
-        //   method: "POST",
-        //   headers: {
-        //     "Content-Type": "application/json",
-        //   },
-        //   body: JSON.stringify({
-        //     prompt,
-        //     context: null,
-        //     caption: imgCaptionData,
-        //     mode,
-        //   }),
-        // })
-        //   .then((res) => res.json())
-        //   .then((data) => data.response)
+        //geminiResponse = await askGemini(prompt, null, imgCaptionData, mode)
+        geminiResponse = await fetch("/api/gemini", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            prompt,
+            context: null,
+            caption: imgCaptionData,
+            mode,
+          }),
+        })
+          .then((res) => res.json())
+          .then((data) => data.response)
       }
 
       setMessages((prev) =>
