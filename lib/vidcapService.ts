@@ -8,7 +8,7 @@ export const getVideoPath = async (videoFile: File): Promise<any> => {
     throw new Error("Backend URL is not set.");
   }
 
-  alert( backendUrl);
+  //alert( backendUrl);
 
   const formData = new FormData();
   formData.append("file", videoFile);
