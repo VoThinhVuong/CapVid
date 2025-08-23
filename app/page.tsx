@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useState, useRef, useEffect } from "react"
+import ReactMarkdown from "react-markdown"
 //import { askGemini } from "@/lib/geminiService"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -646,7 +647,9 @@ export default function Home() {
                           }`}
                         >
                           <div className="flex items-start gap-2">
-                            <p className="whitespace-pre-wrap text-sm leading-relaxed flex-1">{message.content}</p>
+                            <div className="whitespace-pre-wrap text-sm leading-relaxed flex-1">
+                              <ReactMarkdown>{message.content}</ReactMarkdown>
+                            </div>
                             {message.isLoading && message.role === "assistant" && (
                               <Loader2 className="h-4 w-4 text-gray-500 animate-spin flex-shrink-0 mt-0.5" />
                             )}
